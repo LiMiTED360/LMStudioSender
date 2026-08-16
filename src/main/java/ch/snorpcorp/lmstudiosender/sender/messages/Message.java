@@ -1,4 +1,4 @@
-﻿package ch.snorpcorp.lmstudiosender.sender.messages;
+package ch.snorpcorp.lmstudiosender.sender.messages;
 
 import java.io.Serializable;
 

@@ -1,4 +1,4 @@
-﻿package ch.snorpcorp.lmstudiosender.sender.errorHandling;
+package ch.snorpcorp.lmstudiosender.sender.errorHandling;
 
 public class LMStudioRequestFailedException extends RuntimeException {
     private Integer httpStatus = null;
