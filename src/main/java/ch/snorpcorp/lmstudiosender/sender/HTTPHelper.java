@@ -1,4 +1,4 @@
-﻿package ch.snorpcorp.lmstudiosender.sender;
+package ch.snorpcorp.lmstudiosender.sender;
 
 import ch.snorpcorp.lmstudiosender.sender.errorHandling.LMStudioRequestFailedException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,6 +25,10 @@ public class HTTPHelper {
     }
 
     public <T, R> R post(String url, T requestPayload, Class<R> responseType) {
+        return post(url, requestPayload, responseType, null);
+    }
+
+    public <T, R> R post(String url, T requestPayload, Class<R> responseType, String authHeader) {
         String jsonBody;
 
         try {
@@ -33,15 +37,19 @@ public class HTTPHelper {
             throw new LMStudioRequestFailedException("Unable to Parse input record to JSON: " + e.getMessage(), e.getCause(), url);
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .timeout(timeoutDuration)
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
-                .version(HttpClient.Version.HTTP_1_1)
-                .build();
+                .version(HttpClient.Version.HTTP_1_1);
 
+        if (authHeader != null && !authHeader.trim().isEmpty()) {
+            requestBuilder.header("Authorization", authHeader);
+        }
+
+        HttpRequest request = requestBuilder.build();
         HttpResponse<String> response;
 
         try {
