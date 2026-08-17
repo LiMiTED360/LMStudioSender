@@ -48,6 +48,6 @@ public class ContextHelper {
     }
 
     private int getTokens(Message message) {
-        return (int) ((message.getMessage().length() + messageOverhead) / symbolsPerToken);
+        return (int) ((message.content().length() + messageOverhead) / symbolsPerToken);
     }
 }
