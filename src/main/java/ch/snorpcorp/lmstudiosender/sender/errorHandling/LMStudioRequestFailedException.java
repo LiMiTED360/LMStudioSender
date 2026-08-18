@@ -1,9 +1,17 @@
 package ch.snorpcorp.lmstudiosender.sender.errorHandling;
 
+import ch.snorpcorp.lmstudiosender.sender.dto.AIResponse;
+
 public class LMStudioRequestFailedException extends RuntimeException {
-    private Integer httpStatus = null;
+    private Integer httpStatus;
     private String url;
-    private String requestBody = null;
+    private String requestBody;
+    private AIResponse aiResponse;
+
+    public LMStudioRequestFailedException(String message, Throwable cause, AIResponse aiResponse) {
+        super(message, cause);
+        this.aiResponse = aiResponse;
+    }
 
     public LMStudioRequestFailedException(String message, Throwable cause, String url) {
         super(message, cause);
@@ -40,5 +48,9 @@ public class LMStudioRequestFailedException extends RuntimeException {
 
     public String getRequestBody() {
         return requestBody;
+    }
+
+    public AIResponse getAiResponse() {
+        return aiResponse;
     }
 }

@@ -3,6 +3,7 @@ package ch.snorpcorp.lmstudiosender.sender;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIRequest;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIResponse;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIStructuredResponse;
+import ch.snorpcorp.lmstudiosender.sender.errorHandling.LMStudioRequestFailedException;
 import ch.snorpcorp.lmstudiosender.sender.messages.Message;
 import ch.snorpcorp.lmstudiosender.sender.messages.MessageRoles;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,30 +31,30 @@ public class Sender<R> {
         this.context = context;
     }
 
-    public AIResponse sendAIRequest() {
+    public AIResponse sendAIRequest() throws LMStudioRequestFailedException {
         return sendAIRequest(new ArrayList<>());
     }
 
-    public AIResponse sendAIRequest(Message message) {
+    public AIResponse sendAIRequest(Message message) throws LMStudioRequestFailedException {
         return sendAIRequest(List.of(message));
     }
 
-    public AIResponse sendAIRequest(List<Message> messages) {
+    public AIResponse sendAIRequest(List<Message> messages) throws LMStudioRequestFailedException {
         Message systemPrompt = new Message(MessageRoles.system, aiConfig.systemPrompt());
         context.addAll(messages);
         contextHelper.deleteOldContext(context, systemPrompt, maxTokens);
         return httpHelper.post(url, makeAIRequest(aiConfig, context, systemPrompt), AIResponse.class, authToken);
     }
 
-    public AIStructuredResponse<R> sendAIRequestStructured() throws IllegalStateException, JsonProcessingException {
+    public AIStructuredResponse<R> sendAIRequestStructured() throws LMStudioRequestFailedException, IllegalStateException {
         return sendAIRequestStructured(new ArrayList<>());
     }
 
-    public AIStructuredResponse<R> sendAIRequestStructured(Message message) throws IllegalStateException, JsonProcessingException {
+    public AIStructuredResponse<R> sendAIRequestStructured(Message message) throws LMStudioRequestFailedException, IllegalStateException {
         return sendAIRequestStructured(List.of(message));
     }
 
-    public AIStructuredResponse<R> sendAIRequestStructured(List<Message> messages) throws IllegalStateException, JsonProcessingException {
+    public AIStructuredResponse<R> sendAIRequestStructured(List<Message> messages) throws LMStudioRequestFailedException, IllegalStateException {
         if (aiConfig == null || aiConfig.expectedOutput() == null) {
             throw new IllegalStateException("Config does not have structured output expected class configured.");
         }
@@ -61,7 +62,13 @@ public class Sender<R> {
         AIResponse aiResponse = sendAIRequest(messages);
 
         String jsonContent = aiResponse.choices().getFirst().message().content();
-        R structuredData = mapper.readValue(jsonContent, aiConfig.expectedOutput());
+        R structuredData;
+        try {
+            structuredData = mapper.readValue(jsonContent, aiConfig.expectedOutput());
+        } catch (JsonProcessingException e) {
+            throw new LMStudioRequestFailedException("Unable to parsel output into given JSON", e.getCause(), aiResponse);
+        }
+
 
         AIResponse.Choice originalChoice = aiResponse.choices().getFirst();
 
