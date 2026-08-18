@@ -1,4 +1,4 @@
-﻿package ch.snorpcorp.lmstudiosender.sender;
+package ch.snorpcorp.lmstudiosender.sender;
 
 import ch.snorpcorp.lmstudiosender.sender.messages.Message;
 
@@ -16,7 +16,7 @@ public record AIConfig<R> (
         Double frequencyPenalty,
         Integer seed,
         String user,
-        Object responseFormat,
+        String responseFormat,
         Class<R> expectedOutput,
         Map<String, Integer> logitBias
 ) {
@@ -31,7 +31,7 @@ public record AIConfig<R> (
         private Double frequencyPenalty;
         private Integer seed;
         private String user;
-        private Object responseFormat;
+        private String responseFormat;
         private Class<R> expectedOutput;
         private Map<String, Integer> logitBias;
 
@@ -90,7 +90,7 @@ public record AIConfig<R> (
             return this;
         }
 
-        public Builder<R> responseFormat(Object responseFormat) {
+        public Builder<R> responseFormat(String responseFormat) {
             this.responseFormat = responseFormat;
             return this;
         }

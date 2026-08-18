@@ -7,6 +7,7 @@ import ch.snorpcorp.lmstudiosender.sender.errorHandling.LMStudioRequestFailedExc
 import ch.snorpcorp.lmstudiosender.sender.messages.Message;
 import ch.snorpcorp.lmstudiosender.sender.messages.MessageRoles;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -15,8 +16,10 @@ import java.util.List;
 public class Sender<R> {
     private String url;
     private String authToken;
-    private int maxTokens = 4096;
     private AIConfig<R> aiConfig;
+    private int maxTokens;
+    private boolean autosaveMessages;
+    private boolean strictContextAlternate;
 
     private final HTTPHelper httpHelper = new HTTPHelper();
     private final ContextHelper contextHelper = new ContextHelper();
@@ -24,11 +27,14 @@ public class Sender<R> {
 
     private List<Message> context;
 
-    protected Sender(String url, String authToken, int maxTokens, List<Message> context) {
+    private Sender(String url, String authToken, AIConfig<R> aiConfig, int maxTokens, List<Message> context, boolean autosaveMessages, boolean strictContextAlternate) {
         this.url = url;
         this.authToken = authToken;
         this.maxTokens = maxTokens;
         this.context = context;
+        this.autosaveMessages = autosaveMessages;
+        this.aiConfig = aiConfig;
+        this.strictContextAlternate = strictContextAlternate;
     }
 
     public AIResponse sendAIRequest() throws LMStudioRequestFailedException {
@@ -39,11 +45,15 @@ public class Sender<R> {
         return sendAIRequest(List.of(message));
     }
 
-    public AIResponse sendAIRequest(List<Message> messages) throws LMStudioRequestFailedException {
-        Message systemPrompt = new Message(MessageRoles.system, aiConfig.systemPrompt());
-        context.addAll(messages);
-        contextHelper.deleteOldContext(context, systemPrompt, maxTokens);
-        return httpHelper.post(url, makeAIRequest(aiConfig, context, systemPrompt), AIResponse.class, authToken);
+    public AIResponse sendAIRequest(List<Message> messages) throws LMStudioRequestFailedException{
+        prepareContext(messages);
+
+        AIRequest aiRequest = makeAIRequest(aiConfig, context, null, aiConfig.systemPrompt());
+        AIResponse aiResponse = getAIResponse(aiRequest);
+
+        addToContext(aiResponse.choices().getFirst().message());
+
+        return aiResponse;
     }
 
     public AIStructuredResponse<R> sendAIRequestStructured() throws LMStudioRequestFailedException, IllegalStateException {
@@ -59,26 +69,35 @@ public class Sender<R> {
             throw new IllegalStateException("Config does not have structured output expected class configured.");
         }
 
-        AIResponse aiResponse = sendAIRequest(messages);
+        prepareContext(messages);
 
+        JsonNode responseFormat;
+        try {
+            responseFormat = mapper.readTree(aiConfig.responseFormat());
+        } catch (JsonProcessingException e) {
+            throw new LMStudioRequestFailedException("Unable to parse responseFormat String", e.getCause());
+        }
+
+        AIRequest aiRequest = makeAIRequest(aiConfig, context, responseFormat, aiConfig.systemPrompt());
+
+        AIResponse aiResponse = getAIResponse(aiRequest);
         String jsonContent = aiResponse.choices().getFirst().message().content();
+
         R structuredData;
         try {
             structuredData = mapper.readValue(jsonContent, aiConfig.expectedOutput());
         } catch (JsonProcessingException e) {
-            throw new LMStudioRequestFailedException("Unable to parsel output into given JSON", e.getCause(), aiResponse);
+            throw new LMStudioRequestFailedException("Unable to parse output into given JSON", e.getCause(), aiResponse);
         }
 
-
         AIResponse.Choice originalChoice = aiResponse.choices().getFirst();
-
         AIStructuredResponse.Usage structuredUsage = new AIStructuredResponse.Usage(
                 aiResponse.usage().promptTokens(),
                 aiResponse.usage().completionTokens(),
                 aiResponse.usage().totalTokens()
         );
 
-        return new AIStructuredResponse<>(
+        AIStructuredResponse<R> aiStructuredResponse = new AIStructuredResponse<>(
                 aiResponse.id(),
                 aiResponse.object(),
                 aiResponse.created(),
@@ -86,17 +105,50 @@ public class Sender<R> {
                 aiResponse.systemFingerprint(),
                 List.of(new AIStructuredResponse.Choice<>(
                         originalChoice.index(),
-                        structuredData,
+                        new AIStructuredResponse.Choice.AIResponseMessage<>(aiResponse.choices().getFirst().message().role(), structuredData, aiResponse.choices().getFirst().finishReason()),
                         originalChoice.finishReason()
                 )),
                 structuredUsage
         );
+
+        addToContext(aiResponse.choices().getFirst().message());
+
+        return aiStructuredResponse;
     }
 
-    private AIRequest makeAIRequest(AIConfig<R> aiConfig, List<Message> context, Message systemPrompt) {
+    private AIRequest makeAIRequest(AIConfig<R> aiConfig, List<Message> context, Object responseFormat, String systemPrompt) {
         List<Message> messages = new ArrayList<>(context);
-        messages.addFirst(systemPrompt);
-        return new AIRequest(aiConfig.model(), messages, aiConfig.temperature(), aiConfig.topP(), aiConfig.maxTokens(), aiConfig.stop(), aiConfig.presencePenalty(), aiConfig.frequencyPenalty(), aiConfig.seed(), aiConfig.user(), aiConfig.responseFormat(), aiConfig.logitBias());
+        if (systemPrompt != null) messages.addFirst(new Message(MessageRoles.system, systemPrompt));
+
+        return new AIRequest(
+                aiConfig.model(),
+                messages,
+                aiConfig.temperature(),
+                aiConfig.topP(),
+                aiConfig.maxTokens(),
+                aiConfig.stop(),
+                aiConfig.presencePenalty(),
+                aiConfig.frequencyPenalty(),
+                aiConfig.seed(),
+                aiConfig.user(),
+                responseFormat,
+                aiConfig.logitBias()
+        );
+    }
+
+    private AIResponse getAIResponse(AIRequest aiRequest) {
+        AIResponse response = httpHelper.post(url, aiRequest, AIResponse.class, authToken);
+
+        return response;
+    }
+
+    private void prepareContext(List<Message> messages) {
+        context.addAll(messages);
+        contextHelper.deleteOldContext(context, aiConfig.systemPrompt(), maxTokens, strictContextAlternate);
+    }
+
+    private void addToContext(AIResponse.Choice.AIResponseMessage message) {
+        if (autosaveMessages) context.add(new Message(message.role(), message.content()));
     }
 
     public String getUrl() {
@@ -142,11 +194,14 @@ public class Sender<R> {
     public static class Builder<R> {
         private String url = "http://localhost:8123/v1/chat/completions";
         private String authToken = null;
+        private AIConfig<R> aiConfig;
         private int maxTokens = 4096;
         private List<Message> context = new ArrayList<>();
+        private boolean autosaveMessages = true;
+        private boolean strictContextAlternate = false;
 
         public Sender<R> build() {
-            return new Sender<>(url, authToken, maxTokens, context);
+            return new Sender<>(url, authToken, aiConfig, maxTokens, context, autosaveMessages, strictContextAlternate);
         }
 
         public Builder<R> url(String url) {
@@ -159,6 +214,11 @@ public class Sender<R> {
             return this;
         }
 
+        public Builder<R> aiConfig(AIConfig<R> aiConfig) {
+            this.aiConfig = aiConfig;
+            return this;
+        }
+
         public Builder<R> maxTokens(int maxTokens) {
             this.maxTokens = maxTokens;
             return this;
@@ -166,6 +226,16 @@ public class Sender<R> {
 
         public Builder<R> initContext(List<Message> context) {
             this.context = context;
+            return this;
+        }
+
+        public Builder<R> autosaveMessages(boolean autosaveMessages) {
+            this.autosaveMessages = autosaveMessages;
+            return this;
+        }
+
+        public Builder<R> strictContextAlternate(boolean strictContextAlternate) {
+            this.strictContextAlternate = strictContextAlternate;
             return this;
         }
     }

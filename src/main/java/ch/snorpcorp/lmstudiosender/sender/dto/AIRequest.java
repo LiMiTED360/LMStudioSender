@@ -1,4 +1,4 @@
-﻿package ch.snorpcorp.lmstudiosender.sender.dto;
+package ch.snorpcorp.lmstudiosender.sender.dto;
 import ch.snorpcorp.lmstudiosender.sender.messages.Message;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

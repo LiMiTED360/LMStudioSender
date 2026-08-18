@@ -1,5 +1,6 @@
-﻿package ch.snorpcorp.lmstudiosender.sender.dto;
+package ch.snorpcorp.lmstudiosender.sender.dto;
 import ch.snorpcorp.lmstudiosender.sender.messages.Message;
+import ch.snorpcorp.lmstudiosender.sender.messages.MessageRoles;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -19,9 +20,16 @@ public record AIResponse(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Choice(
             int index,
-            Message message,
+            AIResponseMessage message,
             @JsonProperty("finish_reason") String finishReason
-    ) {}
+    ) {
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record AIResponseMessage(
+            MessageRoles role,
+            String content,
+            String reasoning_content
+        ) { }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Usage(

@@ -18,6 +18,11 @@ public class LMStudioRequestFailedException extends RuntimeException {
         this.url = url;
     }
 
+    public LMStudioRequestFailedException(String message, Throwable cause) {
+        super(message, cause);
+        this.url = url;
+    }
+
     public LMStudioRequestFailedException(String message, Throwable cause, String url, String requestBody) {
         super(message, cause);
         this.url = url;

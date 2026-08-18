@@ -62,6 +62,7 @@ public class HTTPHelper {
 
 
         if (response.statusCode() >= 400) {
+            System.out.println(jsonBody);
             throw new LMStudioRequestFailedException("HTTP request failed with status: " + response.statusCode() + " body: " + response.body(), url, jsonBody, response.statusCode());
         }
 
