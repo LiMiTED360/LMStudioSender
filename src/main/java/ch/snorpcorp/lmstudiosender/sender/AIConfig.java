@@ -18,14 +18,14 @@ public record AIConfig<R> (
         String user,
         String responseFormat,
         Class<R> expectedOutput,
-        Map<String, Integer> logitBias
+        Map<Integer, Integer> logitBias
 ) {
     public static class Builder<R> {
         private String systemPrompt;
         private String model;
         private Double temperature;
         private Double topP;
-        private Integer maxTokens;
+        private Integer maxTokens = 1024;
         private List<String> stop;
         private Double presencePenalty;
         private Double frequencyPenalty;
@@ -33,11 +33,17 @@ public record AIConfig<R> (
         private String user;
         private String responseFormat;
         private Class<R> expectedOutput;
-        private Map<String, Integer> logitBias;
+        private Map<Integer, Integer> logitBias;
+
 
         public AIConfig<R> build() throws IllegalStateException {
             if ((responseFormat == null) != (expectedOutput == null)) throw new IllegalStateException("ResponseFormat and expectedOutput have to be either both null or both be filled.");
+            translateValues();
             return new AIConfig<R>(systemPrompt, model, temperature, topP, maxTokens, stop, presencePenalty, frequencyPenalty, seed, user, responseFormat, expectedOutput, logitBias);
+        }
+
+        private void translateValues() {
+            if (0 < maxTokens) maxTokens = null;
         }
 
         public Builder<R> systemPrompt(String systemPrompt) {
@@ -100,7 +106,7 @@ public record AIConfig<R> (
             return this;
         }
 
-        public Builder<R> logitBias(Map<String, Integer> logitBias) {
+        public Builder<R> logitBias(Map<Integer, Integer> logitBias) {
             this.logitBias = logitBias;
             return this;
         }

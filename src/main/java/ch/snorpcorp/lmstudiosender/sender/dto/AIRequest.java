@@ -19,5 +19,5 @@ public record AIRequest(
         Integer seed,
         String user,
         @JsonProperty("response_format") Object responseFormat,
-        @JsonProperty("logit_bias") Map<String, Integer> logitBias
+        @JsonProperty("logit_bias") Map<Integer, Integer> logitBias
 ) { }
