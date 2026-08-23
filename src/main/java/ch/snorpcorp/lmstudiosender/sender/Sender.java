@@ -39,14 +39,41 @@ public class Sender<R> {
         this.strictContextAlternate = strictContextAlternate;
     }
 
+    /**
+     * Sends the Request with no message.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     *
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @see LMStudioRequestFailedException
+     */
     public AIResponse sendAIRequest() throws LMStudioRequestFailedException {
         return sendAIRequest(new ArrayList<>());
     }
 
+    /**
+     * Sends the Request with a single message.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     * @param message message to add to context and send.
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @see LMStudioRequestFailedException
+     */
     public AIResponse sendAIRequest(Message message) throws LMStudioRequestFailedException {
         return sendAIRequest(List.of(message));
     }
 
+    /**
+     * Sends the Request with a multiple messages.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     * @param messages A list of messages which will all be added to the context.
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @see LMStudioRequestFailedException
+     */
     public AIResponse sendAIRequest(List<Message> messages) throws LMStudioRequestFailedException{
         prepareContext(messages);
 
@@ -58,14 +85,45 @@ public class Sender<R> {
         return aiResponse;
     }
 
+    /**
+     * Sends the Request with a single message and the response will be structured.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     *
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @throws IllegalStateException Throws if the AIConfig is not configured correctly
+     * @see LMStudioRequestFailedException
+     */
     public AIStructuredResponse<R> sendAIRequestStructured() throws LMStudioRequestFailedException, IllegalStateException {
         return sendAIRequestStructured(new ArrayList<>());
     }
 
+    /**
+     * Sends the Request with no message and the response will be structured.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     *
+     * @param message message to add to context and send.
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @throws IllegalStateException Throws if the AIConfig is not configured correctly
+     * @see LMStudioRequestFailedException
+     */
     public AIStructuredResponse<R> sendAIRequestStructured(Message message) throws LMStudioRequestFailedException, IllegalStateException {
         return sendAIRequestStructured(List.of(message));
     }
 
+    /**
+     * Sends the Request with a multiple messages and the response will be structured.
+     * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+     *
+     * @param messages A list of messages which will all be added to the context.
+     * @return The response of the Server (the message you probably want will be in .choices().getFirst().message().content()).
+     * @throws LMStudioRequestFailedException Throws if there is any issue with parse or the HTTP
+     * @throws IllegalStateException Throws if the AIConfig is not configured correctly
+     * @see LMStudioRequestFailedException
+     */
     public AIStructuredResponse<R> sendAIRequestStructured(List<Message> messages) throws LMStudioRequestFailedException, IllegalStateException {
         if (aiConfig == null || aiConfig.expectedOutput() == null) {
             throw new IllegalStateException("Config does not have structured output expected class configured.");
