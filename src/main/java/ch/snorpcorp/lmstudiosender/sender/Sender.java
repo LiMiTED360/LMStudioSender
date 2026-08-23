@@ -18,7 +18,7 @@ public class Sender<R> {
     private String url;
     private String authToken;
     private AIConfig<R> aiConfig;
-    private int maxTokens;
+    private int contextLimit;
     private boolean autosaveMessages;
     private boolean strictContextAlternate;
 
@@ -28,10 +28,10 @@ public class Sender<R> {
 
     private List<Message> context;
 
-    private Sender(String url, String authToken, AIConfig<R> aiConfig, int maxTokens, List<Message> context, boolean autosaveMessages, boolean strictContextAlternate) {
+    private Sender(String url, String authToken, AIConfig<R> aiConfig, int contextLimit, List<Message> context, boolean autosaveMessages, boolean strictContextAlternate) {
         this.url = url;
         this.authToken = authToken;
-        this.maxTokens = maxTokens;
+        this.contextLimit = contextLimit;
         this.context = context;
         this.autosaveMessages = autosaveMessages;
         this.aiConfig = aiConfig;
@@ -144,7 +144,7 @@ public class Sender<R> {
 
     private void prepareContext(List<Message> messages) {
         context.addAll(messages);
-        contextHelper.deleteOldContext(context, aiConfig.systemPrompt(), maxTokens, strictContextAlternate);
+        contextHelper.deleteOldContext(context, aiConfig.systemPrompt(), contextLimit, strictContextAlternate);
     }
 
     private void addToContext(AIResponse.Choice.AIResponseMessage message) {
@@ -175,12 +175,12 @@ public class Sender<R> {
         this.aiConfig = aiConfig;
     }
 
-    public int getMaxTokens() {
-        return maxTokens;
+    public int getContextLimit() {
+        return contextLimit;
     }
 
-    public void setMaxTokens(int maxTokens) {
-        this.maxTokens = maxTokens;
+    public void setContextLimit(int contextLimit) {
+        this.contextLimit = contextLimit;
     }
 
     public List<Message> getContext() {
@@ -211,13 +211,13 @@ public class Sender<R> {
         private String url = "http://localhost:8123/v1/chat/completions";
         private String authToken = null;
         private AIConfig<R> aiConfig;
-        private int maxTokens = 4096;
+        private int contextLimit = 4096;
         private List<Message> context = new ArrayList<>();
         private boolean autosaveMessages = true;
         private boolean strictContextAlternate = false;
 
         public Sender<R> build() {
-            return new Sender<>(url, authToken, aiConfig, maxTokens, context, autosaveMessages, strictContextAlternate);
+            return new Sender<>(url, authToken, aiConfig, contextLimit, context, autosaveMessages, strictContextAlternate);
         }
 
         public Builder<R> url(String url) {
@@ -236,7 +236,7 @@ public class Sender<R> {
         }
 
         public Builder<R> maxTokens(int maxTokens) {
-            this.maxTokens = maxTokens;
+            this.contextLimit = maxTokens;
             return this;
         }
 
