@@ -19,7 +19,7 @@ public record AIResponse(
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Choice(
-            int index,
+            Integer index,
             AIResponseMessage message,
             @JsonProperty("finish_reason") String finishReason
     ) {
@@ -33,8 +33,14 @@ public record AIResponse(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Usage(
-            @JsonProperty("prompt_tokens") int promptTokens,
-            @JsonProperty("completion_tokens") int completionTokens,
-            @JsonProperty("total_tokens") int totalTokens
-    ) {}
+            @JsonProperty("prompt_tokens") Integer promptTokens,
+            @JsonProperty("completion_tokens") Integer completionTokens,
+            @JsonProperty("total_tokens") Integer totalTokens,
+            @JsonProperty("completion_tokens_details") CompletionTokensDetails completionTokensDetails
+    ) {
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record CompletionTokensDetails(
+                @JsonProperty("reasoning_tokens") Integer reasoningTokens
+        ) { }
+    }
 }

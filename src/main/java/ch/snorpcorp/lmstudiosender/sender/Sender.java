@@ -21,6 +21,7 @@ public class Sender<R> {
     private int contextLimit;
     private boolean autosaveMessages;
     private boolean strictContextAlternate;
+    private Integer lastContextEstimation;
 
     private final HTTPHelper httpHelper = new HTTPHelper();
     private final ContextHelper contextHelper = new ContextHelper();
@@ -76,7 +77,7 @@ public class Sender<R> {
         try {
             responseFormat = mapper.readTree(aiConfig.responseFormat());
         } catch (JsonProcessingException e) {
-            throw new LMStudioRequestFailedException("Unable to parse responseFormat String", e.getCause());
+            throw new LMStudioRequestFailedException("Unable to parse responseFormat String: " + e.getMessage(), e.getCause());
         }
 
         AIRequest aiRequest = makeAIRequest(aiConfig, context, responseFormat, aiConfig.systemPrompt());
@@ -88,7 +89,7 @@ public class Sender<R> {
         try {
             structuredData = mapper.readValue(jsonContent, aiConfig.expectedOutput());
         } catch (JsonProcessingException e) {
-            throw new LMStudioRequestFailedException("Unable to parse output into given JSON", e.getCause(), aiResponse);
+            throw new LMStudioRequestFailedException("Unable to parse output into given JSON: " + e.getMessage(), e.getCause(), aiResponse);
         }
 
         AIResponse.Choice originalChoice = aiResponse.choices().getFirst();
@@ -144,7 +145,7 @@ public class Sender<R> {
 
     private void prepareContext(List<Message> messages) {
         context.addAll(messages);
-        contextHelper.deleteOldContext(context, aiConfig.systemPrompt(), contextLimit, strictContextAlternate);
+        lastContextEstimation = contextHelper.deleteOldContext(context, aiConfig.systemPrompt(), contextLimit, strictContextAlternate);
     }
 
     private void addToContext(AIResponse.Choice.AIResponseMessage message) {
@@ -157,10 +158,6 @@ public class Sender<R> {
 
     public void setUrl(String url) {
         this.url = url;
-    }
-
-    public String getAuthToken() {
-        return authToken;
     }
 
     public void setAuthToken(String authToken) {
@@ -207,10 +204,14 @@ public class Sender<R> {
         this.autosaveMessages = autosaveMessages;
     }
 
+    public Integer getLastContextEstimation() {
+        return lastContextEstimation;
+    }
+
     public static class Builder<R> {
         private String url = "http://localhost:8123/v1/chat/completions";
         private String authToken = null;
-        private AIConfig<R> aiConfig;
+        private AIConfig<R> aiConfig = new AIConfig.Builder<R>().build();
         private int contextLimit = 4096;
         private List<Message> context = new ArrayList<>();
         private boolean autosaveMessages = true;
@@ -220,36 +221,90 @@ public class Sender<R> {
             return new Sender<>(url, authToken, aiConfig, contextLimit, context, autosaveMessages, strictContextAlternate);
         }
 
+        /**
+         * Full URL to your LM Studio server.
+         * Example (for local): http://localhost:1234/v1/chat/completions
+         *
+         * @param url Full URL.
+         * @return Returns the Builder object.
+         */
         public Builder<R> url(String url) {
             this.url = url;
             return this;
         }
 
+        /**
+         * Auth token for your server.
+         * If you are using a Bearer token, add "Bearer " at the front.
+         * If not set, no auth token will be used.
+         * Example: Bearer sk-lm-XXXXXXXXXXXXXXXXXXXXXX
+         *
+         * @param authToken Your auth token.
+         * @return Returns the Builder object.
+         */
         public Builder<R> authToken(String authToken) {
             this.authToken = authToken;
             return this;
         }
 
+        /**
+         * Your AI config, which can be created using AIConfig.Builder.
+         *
+         * @see AIConfig.Builder
+         * @param aiConfig AI Config object.
+         * @return Returns the Builder object.
+         */
         public Builder<R> aiConfig(AIConfig<R> aiConfig) {
             this.aiConfig = aiConfig;
             return this;
         }
 
-        public Builder<R> maxTokens(int maxTokens) {
-            this.contextLimit = maxTokens;
+        /**
+         * Limit on how long the context can be.
+         * WARNING: If a message is very long, the context might exceed this setting (in v1.0.0).
+         * Newer versions may introduce a setting to strictly enforce the context limit.
+         * WARNING: This currently only estimates the token count of the conversation and intentionally overshoots for safety.
+         *
+         * @param contextLimit The maximum allowed tokens for the context.
+         * @return Returns the Builder object.
+         */
+        public Builder<R> contextLimit(int contextLimit) {
+            this.contextLimit = contextLimit;
             return this;
         }
 
+        /**
+         * Sets an initial context if you already have one.
+         * WARNING: Some AIs like Mistral (or rather their chat templates) require a strict alternating format: System, User, AI, User, AI...
+         *
+         * @param context The initial context.
+         * @return Returns the Builder object.
+         */
         public Builder<R> initContext(List<Message> context) {
             this.context = context;
             return this;
         }
 
+        /**
+         * Automatically saves AI response messages into the context.
+         * WARNING: The user message is ALWAYS saved automatically. If you do not want this, you must manually delete the last entry in the context.
+         *
+         * @param autosaveMessages Should the sender always save AI responses?
+         * @return Returns the Builder object.
+         */
         public Builder<R> autosaveMessages(boolean autosaveMessages) {
             this.autosaveMessages = autosaveMessages;
             return this;
         }
 
+        /**
+         * Some AIs like Mistral (or their chat templates) require a strictly alternating format (System, User, AI, User, AI...).
+         * This setting ensures that this format is maintained during context deletion.
+         * WARNING: This does not validate manually set or added context.
+         *
+         * @param strictContextAlternate Should strict context alternation be enforced?
+         * @return Returns the Builder object.
+         */
         public Builder<R> strictContextAlternate(boolean strictContextAlternate) {
             this.strictContextAlternate = strictContextAlternate;
             return this;

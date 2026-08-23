@@ -9,21 +9,24 @@ public class ContextHelper {
     private final float symbolsPerToken = 3.5f;
     private final int messageOverhead = 50;
 
-    public void deleteOldContext(List<Message> context, String systemPrompt, Message newMessage, int maxTokens, boolean strictContextAlternate) {
-        deleteOldContext(context,  (systemPrompt != null ? getTokens(systemPrompt) : 0) + getTokens(newMessage), maxTokens, strictContextAlternate);
+    public Integer deleteOldContext(List<Message> context, String systemPrompt, Message newMessage, int maxTokens, boolean strictContextAlternate) {
+        return deleteOldContext(context,  (systemPrompt != null ? getTokens(systemPrompt) : 0) + getTokens(newMessage), maxTokens, strictContextAlternate);
     }
 
-    public void deleteOldContext(List<Message> context, String systemPrompt, int maxTokens,  boolean strictContextAlternate) {
-        deleteOldContext(context, systemPrompt != null ? getTokens(systemPrompt) : 0, maxTokens, strictContextAlternate);
+    public Integer deleteOldContext(List<Message> context, String systemPrompt, int maxTokens,  boolean strictContextAlternate) {
+        return deleteOldContext(context, systemPrompt != null ? getTokens(systemPrompt) : 0, maxTokens, strictContextAlternate);
     }
 
-    private void deleteOldContext(List<Message> context, int  startingTokenCount, int maxTokens,  boolean strictContextAlternate) {
-        if (context.isEmpty()) return;
-        deleteOldMessages(context, findOldestMessageToKeep(context, startingTokenCount, maxTokens, strictContextAlternate));
+    private Integer deleteOldContext(List<Message> context, int  startingTokenCount, int maxTokens,  boolean strictContextAlternate) {
+        if (context.isEmpty()) return null;
+        int[] output =  findOldestMessageToKeep(context, startingTokenCount, maxTokens, strictContextAlternate);
+
+        deleteOldMessages(context, output[0]);
+        return output[1];
 
     }
 
-    private int findOldestMessageToKeep(List<Message> context, int startingTokenCount, int maxTokens, boolean strictContextAlternate) {
+    private int[] findOldestMessageToKeep(List<Message> context, int startingTokenCount, int maxTokens, boolean strictContextAlternate) {
         int oldestMessageToKeep = context.size();
         int totalTokenCount = startingTokenCount;
 
@@ -40,7 +43,7 @@ public class ContextHelper {
             }
         }
 
-        return oldestMessageToKeep;
+        return new int[]{oldestMessageToKeep, totalTokenCount};
     }
 
     private void deleteOldMessages(List<Message> context, int oldestMessageToKeep) {
