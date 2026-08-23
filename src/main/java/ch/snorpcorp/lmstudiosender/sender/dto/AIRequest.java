@@ -12,12 +12,13 @@ public record AIRequest(
         List<Message> messages,
         Double temperature,
         @JsonProperty("top_p") Double topP,
+        @JsonProperty("top_k") Integer topK,
         @JsonProperty("max_tokens") Integer maxTokens,
         List<String> stop,
         @JsonProperty("presence_penalty") Double presencePenalty,
         @JsonProperty("frequency_penalty") Double frequencyPenalty,
+        @JsonProperty("repeat_penalty") Double repeatPenalty,
         Integer seed,
-        String user,
         @JsonProperty("response_format") Object responseFormat,
-        @JsonProperty("logit_bias") Map<Integer, Integer> logitBias
+        @JsonProperty("logit_bias") Map<Integer, Double> logitBias
 ) { }

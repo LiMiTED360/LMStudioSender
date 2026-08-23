@@ -1,5 +1,6 @@
 package ch.snorpcorp.lmstudiosender.sender;
 
+import ch.snorpcorp.lmstudiosender.sender.config.AIConfig;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIRequest;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIResponse;
 import ch.snorpcorp.lmstudiosender.sender.dto.AIStructuredResponse;
@@ -125,21 +126,20 @@ public class Sender<R> {
                 messages,
                 aiConfig.temperature(),
                 aiConfig.topP(),
+                aiConfig.topK(),
                 aiConfig.maxTokens(),
                 aiConfig.stop(),
                 aiConfig.presencePenalty(),
                 aiConfig.frequencyPenalty(),
+                aiConfig.repeatPenalty(),
                 aiConfig.seed(),
-                aiConfig.user(),
                 responseFormat,
                 aiConfig.logitBias()
         );
     }
 
     private AIResponse getAIResponse(AIRequest aiRequest) {
-        AIResponse response = httpHelper.post(url, aiRequest, AIResponse.class, authToken);
-
-        return response;
+        return httpHelper.post(url, aiRequest, AIResponse.class, authToken);
     }
 
     private void prepareContext(List<Message> messages) {
@@ -189,6 +189,22 @@ public class Sender<R> {
 
     public void setContext(List<Message> context) {
         this.context = context;
+    }
+
+    public boolean isStrictContextAlternate() {
+        return strictContextAlternate;
+    }
+
+    public void setStrictContextAlternate(boolean strictContextAlternate) {
+        this.strictContextAlternate = strictContextAlternate;
+    }
+
+    public boolean isAutosaveMessages() {
+        return autosaveMessages;
+    }
+
+    public void setAutosaveMessages(boolean autosaveMessages) {
+        this.autosaveMessages = autosaveMessages;
     }
 
     public static class Builder<R> {

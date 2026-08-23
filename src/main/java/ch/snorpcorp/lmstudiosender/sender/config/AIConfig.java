@@ -1,6 +1,4 @@
-package ch.snorpcorp.lmstudiosender.sender;
-
-import ch.snorpcorp.lmstudiosender.sender.messages.Message;
+package ch.snorpcorp.lmstudiosender.sender.config;
 
 import java.util.List;
 import java.util.Map;
@@ -10,40 +8,42 @@ public record AIConfig<R> (
         String model,
         Double temperature,
         Double topP,
+        Integer topK,
         Integer maxTokens,
         List<String> stop,
         Double presencePenalty,
         Double frequencyPenalty,
+        Double repeatPenalty,
         Integer seed,
-        String user,
         String responseFormat,
         Class<R> expectedOutput,
-        Map<Integer, Integer> logitBias
+        Map<Integer, Double> logitBias
 ) {
     public static class Builder<R> {
         private String systemPrompt;
         private String model;
         private Double temperature;
         private Double topP;
+        private Integer topK;
         private Integer maxTokens = 1024;
         private List<String> stop;
         private Double presencePenalty;
         private Double frequencyPenalty;
+        private Double repeatPenalty;
         private Integer seed;
-        private String user;
         private String responseFormat;
         private Class<R> expectedOutput;
-        private Map<Integer, Integer> logitBias;
+        private Map<Integer, Double> logitBias;
 
 
         public AIConfig<R> build() throws IllegalStateException {
             if ((responseFormat == null) != (expectedOutput == null)) throw new IllegalStateException("ResponseFormat and expectedOutput have to be either both null or both be filled.");
             translateValues();
-            return new AIConfig<R>(systemPrompt, model, temperature, topP, maxTokens, stop, presencePenalty, frequencyPenalty, seed, user, responseFormat, expectedOutput, logitBias);
+            return new AIConfig<R>(systemPrompt, model, temperature, topP, topK, maxTokens, stop, presencePenalty, frequencyPenalty, repeatPenalty, seed, responseFormat, expectedOutput, logitBias);
         }
 
         private void translateValues() {
-            if (0 < maxTokens) maxTokens = null;
+            if (0 > maxTokens) maxTokens = null;
         }
 
         public Builder<R> systemPrompt(String systemPrompt) {
@@ -63,6 +63,11 @@ public record AIConfig<R> (
 
         public Builder<R> topP(Double topP) {
             this.topP = topP;
+            return this;
+        }
+
+        public Builder<R> topK(Integer topK) {
+            this.topK = topK;
             return this;
         }
 
@@ -86,13 +91,12 @@ public record AIConfig<R> (
             return this;
         }
 
-        public Builder<R> seed(Integer seed) {
-            this.seed = seed;
+        public Builder<R> repeatPenalty(Double repeatPenalty) {
+            this.repeatPenalty = repeatPenalty;
             return this;
         }
-
-        public Builder<R> user(String user) {
-            this.user = user;
+        public Builder<R> seed(Integer seed) {
+            this.seed = seed;
             return this;
         }
 
@@ -106,7 +110,7 @@ public record AIConfig<R> (
             return this;
         }
 
-        public Builder<R> logitBias(Map<Integer, Integer> logitBias) {
+        public Builder<R> logitBias(Map<Integer, Double> logitBias) {
             this.logitBias = logitBias;
             return this;
         }
